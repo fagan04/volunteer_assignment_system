@@ -61,4 +61,14 @@ public class ServerAPI {
 
     }
 
+    // Access to broadcaster (for WebSocket setup)
+    public AssignmentBroadcaster getBroadcaster()
+    {
+        return broadcaster;
+    }
+
+    public PreferenceStore getStore()
+    {
+        return store;
+    }
 }
