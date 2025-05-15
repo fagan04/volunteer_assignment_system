@@ -35,10 +35,7 @@ public class ServerAPI {
         port(8080);
 
         // CORS (optional)
-        before((req, res) ->
-        {
-            res.header("Access-Control-Allow-Origin", "*");
-        });
+        before((req, res) -> res.header("Access-Control-Allow-Origin", "*"));
 
         // Receive or update volunteer preferences
         post("/preferences", (req, res) ->
@@ -64,14 +61,4 @@ public class ServerAPI {
 
     }
 
-    // Access to broadcaster (for WebSocket setup)
-    public AssignmentBroadcaster getBroadcaster()
-    {
-        return broadcaster;
-    }
-
-    public PreferenceStore getStore()
-    {
-        return store;
-    }
 }
