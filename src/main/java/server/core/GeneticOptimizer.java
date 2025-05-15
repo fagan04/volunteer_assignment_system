@@ -31,8 +31,8 @@ public class GeneticOptimizer {
 
             // Crossover
             while (nextGen.size() < populationSize) {
-                Map<Integer, String> parent1 = select(population);
-                Map<Integer, String> parent2 = select(population);
+                Map<Integer, String> parent1 = select(population, volunteers);
+                Map<Integer, String> parent2 = select(population, volunteers);
                 Map<Integer, String> child = crossover(parent1, parent2);
                 mutate(child);
                 nextGen.add(child);
@@ -127,12 +127,12 @@ public class GeneticOptimizer {
         assignment.put(volId, newService);
     }
 
-    private Map<Integer, String> select(List<Map<Integer, String>> population) {
+    private Map<Integer, String> select(List<Map<Integer, String>> population, Collection<Volunteer> volunteers) {
         // Tournament selection
         int i = new Random().nextInt(population.size());
         int j = new Random().nextInt(population.size());
-        double costI = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> new Volunteer(id, "", null)).toList()); // dummy volunteers
-        double costJ = computeTotalCost(population.get(j), population.get(0).keySet().stream().map(id -> new Volunteer(id, "", null)).toList());
+        double costI = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> volunteers.stream().filter(volunteer -> id == volunteer.getId()).findFirst().get()).toList()); 
+        double costJ = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> volunteers.stream().filter(volunteer -> id == volunteer.getId()).findFirst().get()).toList()); 
         return costI < costJ ? population.get(i) : population.get(j);
     }
 
