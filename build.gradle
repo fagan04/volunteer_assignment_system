@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.sparkjava:spark-core:2.9.3'
+    implementation 'com.google.code.gson:gson:2.8.9'
+    implementation 'org.java-websocket:Java-WebSocket:1.5.3'
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+application {
+    mainClass = 'Main' // default to server or GUI — doesn't matter
+}
+
+tasks.register('runGui', JavaExec) {
+    group = 'application'
+    description = 'Run the Swing GUI'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'client.gui.VolunteerGUI'
+}
+
+tasks.register('runServer', JavaExec) {
+    group = 'application'
+    description = 'Run the backend server'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'Main'
+}
+
+
+tasks.test {
+    useJUnitPlatform()
+}
