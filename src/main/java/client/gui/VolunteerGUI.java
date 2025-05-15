@@ -17,18 +17,17 @@ public class VolunteerGUI {
     private final List<JComboBox<String>> preferenceBoxes = new ArrayList<>();
     private final JTextArea assignmentArea = new JTextArea();
 
-    private final String[] services = {
-            "Reception", "Logistics", "Food Service", "Security", "Media",
-            "Transport", "Medical", "Info Desk", "Cleanup", "Tech Support"
-    };
+    private final String[] services = {"Reception", "Logistics", "Food Service", "Security", "Media", "Transport", "Medical", "Info Desk", "Cleanup", "Tech Support"};
 
     private final int volunteerId = (int) (Math.random() * 10000);
 
-    public VolunteerGUI() {
+    public VolunteerGUI()
+    {
         SwingUtilities.invokeLater(this::createAndShowGUI);
     }
 
-    private void createAndShowGUI() {
+    private void createAndShowGUI()
+    {
         JFrame frame = new JFrame("Volunteer Client - ID " + volunteerId);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(400, 500);
@@ -41,7 +40,8 @@ public class VolunteerGUI {
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
         mainPanel.add(title);
 
-        for (int i = 0; i < 5; i++) {
+        for(int i = 0; i < 5; i++)
+        {
             JComboBox<String> box = new JComboBox<>(services);
             box.setSelectedIndex(-1);
             preferenceBoxes.add(box);
@@ -68,12 +68,15 @@ public class VolunteerGUI {
         networkManager.onAssignmentReceived(this::showAssignments);
     }
 
-    private void submitPreferences() {
+    private void submitPreferences()
+    {
         List<Preference> prefs = new ArrayList<>();
         int priority = 1;
-        for (JComboBox<String> box : preferenceBoxes) {
+        for(JComboBox<String> box : preferenceBoxes)
+        {
             String selected = (String) box.getSelectedItem();
-            if (selected != null && !selected.isEmpty()) {
+            if(selected != null && !selected.isEmpty())
+            {
                 prefs.add(new Preference(selected, priority++));
             }
         }
@@ -84,20 +87,22 @@ public class VolunteerGUI {
         networkManager.postPreferences(v);
     }
 
-    private void showAssignments(List<Assignment> assignments) {
-        SwingUtilities.invokeLater(() -> {
+    private void showAssignments(List<Assignment> assignments)
+    {
+        SwingUtilities.invokeLater(() ->
+        {
             StringBuilder sb = new StringBuilder("Assignment Results:\n");
-            for (Assignment a : assignments) {
-                sb.append("Volunteer ").append(a.getVolunteerId())
-                        .append(" → ").append(a.getServiceName())
-                        .append(" (Cost: ").append(a.getCost()).append(")\n");
+            for(Assignment a : assignments)
+            {
+                sb.append("Volunteer ").append(a.getVolunteerId()).append(" → ").append(a.getServiceName()).append(" (Cost: ").append(a.getCost()).append(")\n");
             }
             assignmentArea.setText(sb.toString());
         });
     }
 
     // Entry point for Swing version
-    public static void main(String[] args) {
+    public static void main(String[] args)
+    {
         new VolunteerGUI();
     }
 }

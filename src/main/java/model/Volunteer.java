@@ -3,17 +3,17 @@ package model;
 import java.util.List;
 
 public class Volunteer {
-    private int id;
-    private String name;
+    private  long id;
+    private final String name;
     private List<Preference> preferences;
 
-    public Volunteer(int id, String name, List<Preference> preferences) {
+    public Volunteer(long id, String name, List<Preference> preferences) {
         this.id = id;
         this.name = name;
         this.preferences = preferences;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 

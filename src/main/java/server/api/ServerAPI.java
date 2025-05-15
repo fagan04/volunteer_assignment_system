@@ -2,7 +2,7 @@ package server.api;
 
 import com.google.gson.Gson;
 import model.Assignment;
-import model.Preference;
+
 import model.Volunteer;
 import server.broadcast.AssignmentBroadcaster;
 import server.core.GeneticOptimizer;
@@ -28,27 +28,31 @@ public class ServerAPI {
             "Medical", 2,
             "Info Desk", 3,
             "Cleanup", 4,
-            "Tech Support", 3
-    );
+            "Tech Support", 3);
 
-    public void start() {
+    public void start()
+    {
         port(8080);
 
         // CORS (optional)
-        before((req, res) -> {
+        before((req, res) ->
+        {
             res.header("Access-Control-Allow-Origin", "*");
         });
 
         // Receive or update volunteer preferences
-        post("/preferences", (req, res) -> {
+        post("/preferences", (req, res) ->
+        {
             Volunteer v = gson.fromJson(req.body(), Volunteer.class);
             store.addOrUpdatePreferences(v);
             return "Preferences received.";
         });
 
         // Trigger optimization and broadcast results
-        post("/optimize", (req, res) -> {
-            new Thread(() -> {
+        post("/optimize", (req, res) ->
+        {
+            new Thread(() ->
+            {
                 System.out.println("Optimization thread started.");
                 GeneticOptimizer optimizer = new GeneticOptimizer(serviceCapacities);
                 List<Assignment> result = optimizer.optimize(store.getAllVolunteers());
@@ -61,11 +65,13 @@ public class ServerAPI {
     }
 
     // Access to broadcaster (for WebSocket setup)
-    public AssignmentBroadcaster getBroadcaster() {
+    public AssignmentBroadcaster getBroadcaster()
+    {
         return broadcaster;
     }
 
-    public PreferenceStore getStore() {
+    public PreferenceStore getStore()
+    {
         return store;
     }
 }

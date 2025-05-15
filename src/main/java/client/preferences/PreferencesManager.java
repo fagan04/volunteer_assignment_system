@@ -7,11 +7,13 @@ import java.util.List;
 public class PreferencesManager {
     private List<Preference> currentPreferences;
 
-    public void setPreferences(List<Preference> preferences) {
+    public void setPreferences(List<Preference> preferences)
+    {
         this.currentPreferences = preferences;
     }
 
-    public List<Preference> getPreferences() {
+    public List<Preference> getPreferences()
+    {
         return currentPreferences;
     }
 }
