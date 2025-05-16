@@ -89,11 +89,29 @@ public class GeneticOptimizer {
     }
 
     private double computeTotalCost(Map<Integer, String> assignment, Collection<Volunteer> volunteers) {
+        // Build service load
+        Map<String, Integer> count = new HashMap<>();
+        for (String service : assignment.values()) {
+            count.put(service, count.getOrDefault(service, 0) + 1);
+        }
+
+        // Check for capacity violations
+        for (Map.Entry<String, Integer> entry : count.entrySet()) {
+            String service = entry.getKey();
+            int assigned = entry.getValue();
+            int capacity = serviceCapacities.getOrDefault(service, Integer.MAX_VALUE);
+            if (assigned > capacity) {
+                return Double.MAX_VALUE; // HARD CONSTRAINT: invalid assignment
+            }
+        }
+
+        // Valid: calculate total cost
         double total = 0;
         for (Volunteer v : volunteers) {
             String assigned = assignment.get(v.getId());
             total += calculateCost(v, assigned);
         }
+
         return total;
     }
 
@@ -119,20 +137,38 @@ public class GeneticOptimizer {
     private void mutate(Map<Integer, String> assignment) {
         if (Math.random() > mutationRate) return;
 
-        List<Integer> keys = new ArrayList<>(assignment.keySet());
-        int index = new Random().nextInt(keys.size());
-        int volId = keys.get(index);
-        List<String> serviceList = new ArrayList<>(serviceCapacities.keySet());
-        String newService = serviceList.get(new Random().nextInt(serviceList.size()));
-        assignment.put(volId, newService);
+        List<Integer> ids = new ArrayList<>(assignment.keySet());
+        int index = new Random().nextInt(ids.size());
+        int volId = ids.get(index);
+
+        // Count current usage
+        Map<String, Integer> currentLoad = new HashMap<>();
+        for (String service : assignment.values()) {
+            currentLoad.put(service, currentLoad.getOrDefault(service, 0) + 1);
+        }
+
+        List<String> candidates = new ArrayList<>();
+        for (String service : serviceCapacities.keySet()) {
+            int used = currentLoad.getOrDefault(service, 0);
+            int cap = serviceCapacities.get(service);
+            if (used < cap) {
+                candidates.add(service);
+            }
+        }
+
+        if (!candidates.isEmpty()) {
+            String newService = candidates.get(new Random().nextInt(candidates.size()));
+            assignment.put(volId, newService);
+        }
     }
+
 
     private Map<Integer, String> select(List<Map<Integer, String>> population, Collection<Volunteer> volunteers) {
         // Tournament selection
         int i = new Random().nextInt(population.size());
         int j = new Random().nextInt(population.size());
-        double costI = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> volunteers.stream().filter(volunteer -> id == volunteer.getId()).findFirst().get()).toList()); 
-        double costJ = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> volunteers.stream().filter(volunteer -> id == volunteer.getId()).findFirst().get()).toList()); 
+        double costI = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> volunteers.stream().filter(volunteer -> id == volunteer.getId()).findFirst().get()).toList());
+        double costJ = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> volunteers.stream().filter(volunteer -> id == volunteer.getId()).findFirst().get()).toList());
         return costI < costJ ? population.get(i) : population.get(j);
     }
 
