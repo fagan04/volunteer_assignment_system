@@ -16,26 +16,33 @@ import java.util.stream.Collectors;
 
 public class VolunteerGUI {
 
+    // List of available services volunteers can choose from
     private static final String[] SERVICES = {
             "Reception", "Logistics", "Food Service", "Security", "Media",
             "Transport", "Medical", "Info Desk", "Cleanup", "Tech Support"
     };
 
-    private final int volunteerId = new Random().nextInt(9000) + 1000; // 1000‑9999
+    // Each volunteer is assigned a random ID between 1000 and 9999
+    private final int volunteerId = new Random().nextInt(9000) + 1000;
+
+    // Managers for handling preferences and network communication
     private final PreferencesManager preferencesManager = new PreferencesManager();
     private final ClientNetworkManager networkManager    = new ClientNetworkManager();
 
-    private final List<JComboBox<String>> selectors = new ArrayList<>();
-    private final JTextPane outputPane              = new JTextPane();
-    private final JTextArea serviceSummaryArea      = new JTextArea(10, 30);
-    private final JLabel status                     = new JLabel("Welcome!");
-    private final JLabel totalCostLabel             = new JLabel("Total Cost: 0");
+    // GUI components
+    private final List<JComboBox<String>> selectors = new ArrayList<>(); // Preference dropdowns
+    private final JTextPane outputPane              = new JTextPane();   // HTML-based output for assignments
+    private final JTextArea serviceSummaryArea      = new JTextArea(10, 30); // Summary of service assignments
+    private final JLabel status                     = new JLabel("Welcome!"); // Status label
+    private final JLabel totalCostLabel             = new JLabel("Total Cost: 0"); // Total cost label
 
+    // Constructor initializes UI and sets up network listener
     public VolunteerGUI() {
         SwingUtilities.invokeLater(this::initUI);
         networkManager.onAssignmentReceived(this::renderAssignments);
     }
 
+    // Initializes the main UI frame
     private void initUI() {
         installLookAndFeel();
 
@@ -48,13 +55,14 @@ public class VolunteerGUI {
         root.setBorder(new EmptyBorder(12, 12, 12, 12));
         frame.setContentPane(root);
 
-        root.add(buildPreferencePanel(), BorderLayout.NORTH);
-        root.add(buildOutputPanel(),     BorderLayout.CENTER);
-        root.add(buildStatusBar(),       BorderLayout.SOUTH);
+        root.add(buildPreferencePanel(), BorderLayout.NORTH); // Top panel for preferences
+        root.add(buildOutputPanel(),     BorderLayout.CENTER); // Center panel for output
+        root.add(buildStatusBar(),       BorderLayout.SOUTH); // Bottom status bar
 
         frame.setVisible(true);
     }
 
+    // Builds the panel where volunteers select and submit their preferences
     private JPanel buildPreferencePanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createTitledBorder("Rank your service preferences"));
@@ -66,11 +74,12 @@ public class VolunteerGUI {
         gbc.gridx   = 0;
         gbc.gridy   = 0;
 
+        // Create 5 dropdowns for service preferences
         for (int i = 0; i < 5; i++) {
             selectors.add(new JComboBox<>(SERVICES));
-            selectors.get(i).setSelectedIndex(-1);
+            selectors.get(i).setSelectedIndex(-1); // No initial selection
             final int index = i;
-            selectors.get(i).addActionListener(e -> enforceUniqueChoices(index));
+            selectors.get(i).addActionListener(e -> enforceUniqueChoices(index)); // Ensure uniqueness
 
             panel.add(new JLabel((i + 1) + ":"), gbc);
             gbc.gridx = 1;
@@ -94,9 +103,10 @@ public class VolunteerGUI {
         return panel;
     }
 
+    // Builds the panel for displaying the assignments and summary
     private JPanel buildOutputPanel() {
         outputPane.setEditable(false);
-        outputPane.setContentType("text/html");
+        outputPane.setContentType("text/html"); // Enables HTML formatting
 
         serviceSummaryArea.setEditable(false);
         serviceSummaryArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
@@ -110,6 +120,7 @@ public class VolunteerGUI {
         return panel;
     }
 
+    // Builds the bottom status bar
     private JPanel buildStatusBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.add(status, BorderLayout.WEST);
@@ -117,6 +128,7 @@ public class VolunteerGUI {
         return bar;
     }
 
+    // Enforces that each preference is unique across dropdowns
     private void enforceUniqueChoices(int changedIndex) {
         Set<String> chosen = selectors.stream()
                 .map(cb -> (String) cb.getSelectedItem())
@@ -132,10 +144,11 @@ public class VolunteerGUI {
                 }
             }
             cb.setModel(model);
-            cb.setSelectedItem(current);
+            cb.setSelectedItem(current); // Keep current selection
         }
     }
 
+    // Sends the user's service preferences to the server
     private void submitPreferences() {
         List<Preference> prefs = new ArrayList<>();
         int rank = 1;
@@ -157,11 +170,13 @@ public class VolunteerGUI {
         status.setText("Preferences sent at " + LocalTime.now().withNano(0));
     }
 
+    // Displays the assignments and service summary
     private void renderAssignments(java.util.List<Assignment> assignments) {
         SwingUtilities.invokeLater(() -> {
             StringBuilder html = new StringBuilder("<html><body style='font-family:monospace'>");
             html.append("<b>Updated at ").append(LocalTime.now().withNano(0)).append("</b><br><br>");
 
+            // Highlight current volunteer's assignment
             assignments.stream()
                     .filter(a -> a.getVolunteerId() == volunteerId)
                     .findFirst()
@@ -182,6 +197,7 @@ public class VolunteerGUI {
             totalCostLabel.setText("Total Cost: " + (int) totalCost);
             status.setText("Last update " + LocalTime.now().withNano(0));
 
+            // Count how many volunteers are assigned to each service
             Map<String, Integer> serviceCounts = new HashMap<>();
             for (Assignment a : assignments) {
                 String service = a.getServiceName();
@@ -197,6 +213,7 @@ public class VolunteerGUI {
         });
     }
 
+    // Attempts to install a modern look and feel if available
     private void installLookAndFeel() {
         try {
             UIManager.setLookAndFeel("com.formdev.flatlaf.FlatIntelliJLaf");
@@ -205,6 +222,7 @@ public class VolunteerGUI {
         }
     }
 
+    // Entry point
     public static void main(String[] args) {
         new VolunteerGUI();
     }

@@ -6,30 +6,38 @@ import model.Volunteer;
 
 import java.util.*;
 
+/**
+ * Uses a genetic algorithm to assign volunteers to services based on their preferences,
+ * while respecting service capacity constraints and minimizing overall dissatisfaction.
+ */
 public class GeneticOptimizer {
-    private final int maxGenerations = 100;
-    private final int populationSize = 50;
-    private final double mutationRate = 0.1;
+    private final int maxGenerations = 100;      // Number of generations to evolve
+    private final int populationSize = 50;       // Size of population in each generation
+    private final double mutationRate = 0.1;     // Probability of mutation
 
-    private final Map<String, Integer> serviceCapacities;
+    private final Map<String, Integer> serviceCapacities; // Max volunteers per service
 
     public GeneticOptimizer(Map<String, Integer> serviceCapacities) {
         this.serviceCapacities = serviceCapacities;
     }
 
+    /**
+     * Entry point for optimization process.
+     */
     public List<Assignment> optimize(Collection<Volunteer> volunteers) {
         List<Map<Integer, String>> population = generateInitialPopulation(volunteers);
 
         for (int gen = 0; gen < maxGenerations; gen++) {
+            // Sort by fitness (lower cost is better)
             population.sort(Comparator.comparingDouble(assignments -> computeTotalCost(assignments, volunteers)));
 
             List<Map<Integer, String>> nextGen = new ArrayList<>();
 
-            // Elitism: carry top 10% directly
+            // Elitism: retain top 10%
             int eliteCount = (int) (populationSize * 0.1);
             nextGen.addAll(population.subList(0, eliteCount));
 
-            // Crossover
+            // Fill rest of next generation with offspring
             while (nextGen.size() < populationSize) {
                 Map<Integer, String> parent1 = select(population, volunteers);
                 Map<Integer, String> parent2 = select(population, volunteers);
@@ -41,12 +49,14 @@ public class GeneticOptimizer {
             population = nextGen;
         }
 
-        // Best solution after all generations
+        // Return the best assignment after all generations
         Map<Integer, String> best = population.get(0);
         return toAssignmentList(best, volunteers);
     }
 
-    // Initial random valid solutions
+    /**
+     * Generates initial population with random valid assignments.
+     */
     private List<Map<Integer, String>> generateInitialPopulation(Collection<Volunteer> volunteers) {
         List<Map<Integer, String>> population = new ArrayList<>();
         List<String> services = new ArrayList<>(serviceCapacities.keySet());
@@ -54,10 +64,13 @@ public class GeneticOptimizer {
         for (int i = 0; i < populationSize; i++) {
             Map<Integer, String> assignment = new HashMap<>();
             Map<String, Integer> serviceLoad = new HashMap<>();
+
             for (Volunteer v : volunteers) {
                 List<String> prefs = new ArrayList<>();
-                for (Preference p : v.getPreferences()) prefs.add(p.getServiceName());
-                Collections.shuffle(prefs); // random preference order
+                for (Preference p : v.getPreferences()) {
+                    prefs.add(p.getServiceName());
+                }
+                Collections.shuffle(prefs); // Randomize preference order
 
                 String chosen = null;
                 for (String s : prefs) {
@@ -68,7 +81,8 @@ public class GeneticOptimizer {
                         break;
                     }
                 }
-                // fallback: random service
+
+                // Fallback if all preferences are full
                 if (chosen == null) {
                     for (String s : services) {
                         int used = serviceLoad.getOrDefault(s, 0);
@@ -82,30 +96,31 @@ public class GeneticOptimizer {
 
                 assignment.put(v.getId(), chosen);
             }
+
             population.add(assignment);
         }
 
         return population;
     }
 
+    /**
+     * Computes the cost of a full assignment (lower is better).
+     */
     private double computeTotalCost(Map<Integer, String> assignment, Collection<Volunteer> volunteers) {
-        // Build service load
+        // Track how many are assigned to each service
         Map<String, Integer> count = new HashMap<>();
         for (String service : assignment.values()) {
             count.put(service, count.getOrDefault(service, 0) + 1);
         }
 
-        // Check for capacity violations
+        // Check for over-capacity (hard constraint)
         for (Map.Entry<String, Integer> entry : count.entrySet()) {
-            String service = entry.getKey();
-            int assigned = entry.getValue();
-            int capacity = serviceCapacities.getOrDefault(service, Integer.MAX_VALUE);
-            if (assigned > capacity) {
-                return Double.MAX_VALUE; // HARD CONSTRAINT: invalid assignment
+            if (entry.getValue() > serviceCapacities.getOrDefault(entry.getKey(), Integer.MAX_VALUE)) {
+                return Double.MAX_VALUE;
             }
         }
 
-        // Valid: calculate total cost
+        // Sum up dissatisfaction cost
         double total = 0;
         for (Volunteer v : volunteers) {
             String assigned = assignment.get(v.getId());
@@ -115,17 +130,25 @@ public class GeneticOptimizer {
         return total;
     }
 
+    /**
+     * Calculates dissatisfaction cost for a single volunteer assignment.
+     */
     private double calculateCost(Volunteer v, String service) {
         List<Preference> prefs = v.getPreferences();
         for (int i = 0; i < prefs.size(); i++) {
             if (prefs.get(i).getServiceName().equals(service)) {
-                return Math.pow(i, 2);
+                return Math.pow(i, 2); // Quadratic penalty for lower-ranked preferences
             }
         }
-        int Nd = prefs.size(); // worst-case penalty
+
+        // Heavy penalty if the service isn't in the preference list
+        int Nd = prefs.size();
         return 10 * Nd * Nd;
     }
 
+    /**
+     * Produces a new child assignment by combining two parents.
+     */
     private Map<Integer, String> crossover(Map<Integer, String> p1, Map<Integer, String> p2) {
         Map<Integer, String> child = new HashMap<>();
         for (Integer id : p1.keySet()) {
@@ -134,6 +157,9 @@ public class GeneticOptimizer {
         return child;
     }
 
+    /**
+     * Randomly mutate a single assignment.
+     */
     private void mutate(Map<Integer, String> assignment) {
         if (Math.random() > mutationRate) return;
 
@@ -141,37 +167,49 @@ public class GeneticOptimizer {
         int index = new Random().nextInt(ids.size());
         int volId = ids.get(index);
 
-        // Count current usage
+        // Calculate current usage
         Map<String, Integer> currentLoad = new HashMap<>();
         for (String service : assignment.values()) {
             currentLoad.put(service, currentLoad.getOrDefault(service, 0) + 1);
         }
 
+        // Find services that still have capacity
         List<String> candidates = new ArrayList<>();
         for (String service : serviceCapacities.keySet()) {
-            int used = currentLoad.getOrDefault(service, 0);
-            int cap = serviceCapacities.get(service);
-            if (used < cap) {
+            if (currentLoad.getOrDefault(service, 0) < serviceCapacities.get(service)) {
                 candidates.add(service);
             }
         }
 
         if (!candidates.isEmpty()) {
             String newService = candidates.get(new Random().nextInt(candidates.size()));
-            assignment.put(volId, newService);
+            assignment.put(volId, newService); // Mutate the assignment
         }
     }
 
-
+    /**
+     * Selects a parent from the population using tournament selection.
+     */
     private Map<Integer, String> select(List<Map<Integer, String>> population, Collection<Volunteer> volunteers) {
-        // Tournament selection
+        // Tournament: pick two and keep the better one
         int i = new Random().nextInt(population.size());
         int j = new Random().nextInt(population.size());
-        double costI = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> volunteers.stream().filter(volunteer -> id == volunteer.getId()).findFirst().get()).toList());
-        double costJ = computeTotalCost(population.get(i), population.get(0).keySet().stream().map(id -> volunteers.stream().filter(volunteer -> id == volunteer.getId()).findFirst().get()).toList());
+
+        // Create mapping of volunteer IDs to Volunteer objects for cost calculation
+        Map<Integer, Volunteer> volunteerMap = new HashMap<>();
+        for (Volunteer v : volunteers) {
+            volunteerMap.put(v.getId(), v);
+        }
+
+        double costI = computeTotalCost(population.get(i), volunteerMap.values());
+        double costJ = computeTotalCost(population.get(j), volunteerMap.values());
+
         return costI < costJ ? population.get(i) : population.get(j);
     }
 
+    /**
+     * Converts an internal assignment map to a list of Assignment objects.
+     */
     private List<Assignment> toAssignmentList(Map<Integer, String> map, Collection<Volunteer> volunteers) {
         List<Assignment> result = new ArrayList<>();
         for (Volunteer v : volunteers) {

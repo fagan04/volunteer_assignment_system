@@ -12,12 +12,15 @@ import static spark.Spark.*;
 
 import java.util.*;
 
+/**
+ * Defines REST API endpoints and optimization trigger for the volunteer assignment system.
+ */
 public class ServerAPI {
-    private final PreferenceStore store = new PreferenceStore();
-    private final AssignmentBroadcaster broadcaster = new AssignmentBroadcaster();
-    private final Gson gson = new Gson();
+    private final PreferenceStore store = new PreferenceStore();             // Stores preferences from all volunteers
+    private final AssignmentBroadcaster broadcaster = new AssignmentBroadcaster(); // Broadcasts assignment results
+    private final Gson gson = new Gson();                                    // For JSON serialization/deserialization
 
-    // Define service capacities (random or fixed)
+    // Defines max capacities for each service
     private final Map<String, Integer> serviceCapacities = Map.of(
             "Reception", 4,
             "Logistics", 3,
@@ -31,40 +34,47 @@ public class ServerAPI {
             "Tech Support", 3
     );
 
+    /**
+     * Initializes and starts the HTTP server with defined endpoints.
+     */
     public void start() {
-        port(8080);
+        port(8080); // Server listens on port 8080
 
-        // CORS (optional)
+        // Enables CORS for all origins (useful for frontend communication)
         before((req, res) -> {
             res.header("Access-Control-Allow-Origin", "*");
         });
 
-        // Receive or update volunteer preferences
+        // POST endpoint to receive or update volunteer preferences
         post("/preferences", (req, res) -> {
-            Volunteer v = gson.fromJson(req.body(), Volunteer.class);
-            store.addOrUpdatePreferences(v);
-            return "Preferences received.";
+            Volunteer v = gson.fromJson(req.body(), Volunteer.class); // Parse JSON to Volunteer
+            store.addOrUpdatePreferences(v);                          // Save or update preferences
+            return "Preferences received.";                           // Response message
         });
 
-        // Trigger optimization and broadcast results
+        // POST endpoint to trigger optimization and broadcast assignment results
         post("/optimize", (req, res) -> {
-            new Thread(() -> {
+            new Thread(() -> { // Run optimization asynchronously
                 System.out.println("Optimization thread started.");
-                GeneticOptimizer optimizer = new GeneticOptimizer(serviceCapacities);
-                List<Assignment> result = optimizer.optimize(store.getAllVolunteers());
+                GeneticOptimizer optimizer = new GeneticOptimizer(serviceCapacities); // Initialize optimizer with capacities
+                List<Assignment> result = optimizer.optimize(store.getAllVolunteers()); // Perform optimization
                 System.out.println("Optimization thread finished. Broadcasting results.");
-                broadcaster.broadcastAssignments(result);
+                broadcaster.broadcastAssignments(result); // Send results to all WebSocket clients
             }).start();
-            return "Optimization started.";
+            return "Optimization started."; // Immediate response to client
         });
-
     }
 
-    // Access to broadcaster (for WebSocket setup)
+    /**
+     * Exposes the broadcaster (used for setting up WebSocket broadcasting).
+     */
     public AssignmentBroadcaster getBroadcaster() {
         return broadcaster;
     }
 
+    /**
+     * Exposes the internal preference store (e.g., for testing or debugging).
+     */
     public PreferenceStore getStore() {
         return store;
     }
